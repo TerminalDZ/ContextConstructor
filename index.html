@@ -1,829 +1,1302 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced File Combiner & Organizer</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced File Combiner & Organizer - Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* bg-gray-100 */
+      :root {
+        --primary-gradient: #667eea;
+        --secondary-gradient: #f093fb;
+        --success-gradient: #4facfe;
+        --danger-gradient: #fa709a;
+        --dark-gradient: #2c3e50;
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(
+          135deg,
+          #667eea 0%,
+          #764ba2 25%,
+          #667eea 50%,
+          #764ba2 75%,
+          #667eea 100%
+        );
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        min-height: 100vh;
+      }
+
+      @keyframes gradientShift {
+        0% {
+          background-position: 0% 50%;
         }
-        .file-item {
-            cursor: grab;
-            transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        50% {
+          background-position: 100% 50%;
         }
-        .file-item:active {
-            cursor: grabbing;
+        100% {
+          background-position: 0% 50%;
         }
-        .file-item.dragging {
-            opacity: 0.6;
-            background-color: #d1d5db; /* bg-gray-300 */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+      }
+
+      .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .file-tree {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.875rem;
+      }
+
+      .tree-item {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: 0.375rem;
+        margin: 0.125rem 0;
+      }
+
+      .tree-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(4px);
+      }
+
+      .tree-item.hidden-file {
+        opacity: 0.4;
+        background: rgba(255, 0, 0, 0.1);
+      }
+
+      .tree-item.skipped-file {
+        opacity: 0.6;
+        background: rgba(255, 255, 0, 0.1);
+      }
+
+      .tree-folder {
+        font-weight: 600;
+        color: #fbbf24;
+      }
+
+      .tree-file {
+        color: #e5e7eb;
+      }
+
+      .tree-indent {
+        display: inline-block;
+        width: 1rem;
+      }
+
+      .modern-button {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        transform: perspective(1px) translateZ(0);
+      }
+
+      .modern-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      }
+
+      .modern-button:active {
+        transform: translateY(0px);
+      }
+
+      .gradient-text {
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 12px;
+        color: white;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .toast.success {
+        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      }
+
+      .toast.error {
+        background: linear-gradient(135deg, #fee140 0%, #fa709a 100%);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
         }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 12px 24px;
-            background-color: #10b981; /* bg-emerald-500 */
-            color: white;
-            border-radius: 8px; /* rounded-lg */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out, transform 0.3s ease-in-out;
-            transform: translateX(-50%) translateY(20px);
+        to {
+          opacity: 1;
         }
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
+      }
+
+      .modal-content {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        margin: 5% auto;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        max-width: 600px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(-50px);
+          opacity: 0;
         }
-        textarea::-webkit-scrollbar {
-            width: 8px;
+        to {
+          transform: translateY(0);
+          opacity: 1;
         }
-        textarea::-webkit-scrollbar-track {
-            background: #e5e7eb; /* bg-gray-200 */
-            border-radius: 10px;
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.3);
+        transition: 0.4s;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        top: 1px;
+        background: white;
+        transition: 0.4s;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      input:checked + .slider {
+        background: var(--primary-gradient);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(18px);
+      }
+
+      .stats-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        color: white;
+      }
+
+      .loading-spinner {
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 3px solid #ffffff;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        display: inline-block;
+        margin-right: 0.5rem;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        textarea::-webkit-scrollbar-thumb {
-            background: #9ca3af; /* bg-gray-400 */
-            border-radius: 10px;
+        100% {
+          transform: rotate(360deg);
         }
-        textarea::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* bg-gray-500 */
-        }
-        .custom-file-button {
-            padding: 0.6rem 1.2rem;
-            border-radius: 0.375rem; /* rounded-md */
-            font-weight: 600; /* font-semibold */
-            background-color: #0ea5e9; /* bg-sky-500 */
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-        .custom-file-button:hover {
-            background-color: #0284c7; /* bg-sky-600 */
-        }
-        .custom-file-button:active {
-            transform: translateY(1px);
-        }
-        .input-group {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        /* Modal Styles */
-        .modal {
-            display: none; 
-            position: fixed;
-            z-index: 1050;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.5); 
-        }
-        .modal-content {
-            background-color: #ffffff; 
-            margin: 10% auto; 
-            padding: 24px; 
-            border-radius: 0.5rem; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 500px; 
-        }
-        .modal-header {
-            padding-bottom: 1rem; 
-            border-bottom: 1px solid #e5e7eb; 
-            margin-bottom: 1rem; 
-        }
-        .modal-title {
-            font-size: 1.25rem; 
-            font-weight: 600; 
-            color: #1f2937; 
-        }
-        .modal-body {
-            margin-bottom: 1.5rem; 
-        }
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.75rem; 
-        }
-        .modal-button {
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-weight: 500; 
-            transition: background-color 0.15s ease;
-        }
-        .modal-button-primary {
-            background-color: #0ea5e9; 
-            color: white;
-        }
-        .modal-button-primary:hover {
-            background-color: #0284c7; 
-        }
-        .modal-button-danger { /* For danger actions like delete */
-            background-color: #ef4444; /* bg-red-500 */
-            color: white;
-        }
-        .modal-button-danger:hover {
-            background-color: #dc2626; /* bg-red-600 */
-        }
-        .modal-button-secondary {
-            background-color: #e5e7eb; 
-            color: #374151; 
-        }
-        .modal-button-secondary:hover {
-            background-color: #d1d5db; 
-        }
-        .icon-button {
-            background: none;
-            border: none;
-            padding: 0.25rem;
-            color: #6b7280; 
-            cursor: pointer;
-            transition: color 0.15s ease;
-        }
-        .icon-button:hover {
-            color: #1f2937; 
-        }
+      }
+
+      .code-output {
+        background: rgba(0, 0, 0, 0.8);
+        color: #e5e7eb;
+        font-family: "JetBrains Mono", monospace;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .syntax-highlight {
+        color: #fbbf24;
+      }
+
+      .file-path {
+        color: #60a5fa;
+      }
+
+      .scrollbar-hide {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
     </style>
-</head>
-<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center p-4">
+  </head>
+  <body class="text-white min-h-screen">
+    <div class="container mx-auto max-w-7xl p-6">
+      <!-- Header -->
+      <header class="text-center mb-8">
+        <h1 class="text-5xl font-bold gradient-text mb-4">
+          Advanced File Combiner Pro
+        </h1>
+        <p class="text-xl text-white/80">
+          Professional file organization and combination tool with modern tree
+          view
+        </p>
+      </header>
 
-    <div class="container mx-auto max-w-4xl bg-white shadow-xl rounded-lg p-6 md:p-8">
-        <header class="mb-8 text-center">
-            <h1 class="text-3xl font-bold text-sky-600">Advanced File Combiner & Organizer</h1>
-            <p class="text-gray-600 mt-2">Select folders, files, or enter paths manually. Organize them, then combine their content.</p>
-        </header>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Panel - Controls -->
+        <div class="lg:col-span-1 space-y-6">
+          <!-- Upload Section -->
+          <div class="glass-card rounded-2xl p-6">
+            <h2 class="text-xl font-bold mb-4 text-white flex items-center">
+              <svg
+                class="w-6 h-6 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
+              </svg>
+              Upload Files
+            </h2>
 
-        <!-- File/Folder Upload Section -->
-        <section class="mb-6 space-y-4">
-            <div>
-                <label class="block text-lg font-medium text-gray-700 mb-3">1. Add Files:</label>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <button type="button" id="selectFolderButton" class="custom-file-button w-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                        </svg>
-                        Select Folder
-                    </button>
-                    <input type="file" id="folderUpload" webkitdirectory directory multiple class="hidden">
+            <div class="space-y-3">
+              <button
+                type="button"
+                id="selectFolderButton"
+                class="modern-button w-full py-3 px-6 rounded-xl text-white font-semibold"
+                style="background: var(--primary-gradient)"
+              >
+                <svg
+                  class="w-5 h-5 inline mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"
+                  ></path>
+                </svg>
+                Select Folder
+              </button>
+              <input
+                type="file"
+                id="folderUpload"
+                webkitdirectory
+                directory
+                multiple
+                class="hidden"
+              />
 
-                    <button type="button" id="selectFilesButton" class="custom-file-button w-full">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A1 1 0 0111 2.586L12.414 4H16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm0 2v10h12V6H4z" clip-rule="evenodd" />
-                            <path fill-rule="evenodd" d="M6 8a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1z" clip-rule="evenodd" />
-                        </svg>
-                        Select Files
-                    </button>
-                    <input type="file" id="filesUpload" multiple class="hidden">
-                </div>
+              <button
+                type="button"
+                id="selectFilesButton"
+                class="modern-button w-full py-3 px-6 rounded-xl text-white font-semibold"
+                style="background: var(--secondary-gradient)"
+              >
+                <svg
+                  class="w-5 h-5 inline mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                Select Files
+              </button>
+              <input type="file" id="filesUpload" multiple class="hidden" />
             </div>
-            <div>
-                <label for="manualPathInput" class="block text-sm font-medium text-gray-700 mb-1">Or enter path manually:</label>
-                <div class="input-group">
-                    <input type="text" id="manualPathInput" placeholder="e.g., src/components/Button.js"
-                           class="flex-grow p-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 text-sm">
-                    <button type="button" id="addManualPathButton" class="custom-file-button text-sm py-2.5 px-4">
-                        Attach File to Path
-                    </button>
-                </div>
-                <input type="file" id="manualFileUpload" class="hidden">
-            </div>
-        </section>
 
-        <!-- File List and Ordering Section -->
-        <section class="mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="text-lg font-medium text-gray-700">2. Added Files (<span id="fileCount">0</span>)</h2>
-                <button type="button" id="clearAllButton" class="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                    Clear All
+            <div class="mt-4 pt-4 border-t border-white/20">
+              <label class="block text-sm font-medium mb-2"
+                >Manual Path Entry:</label
+              >
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="manualPathInput"
+                  placeholder="e.g., src/components/Button.js"
+                  class="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <button
+                  type="button"
+                  id="addManualPathButton"
+                  class="modern-button px-4 py-2 rounded-lg text-white font-medium"
+                  style="background: var(--success-gradient)"
+                >
+                  Add
                 </button>
+              </div>
+              <input type="file" id="manualFileUpload" class="hidden" />
             </div>
-            <div id="fileListContainer" class="bg-gray-50 p-4 rounded-lg border border-gray-200 min-h-[150px]">
-                <p id="noFilesMessage" class="text-gray-500 text-center">No files added yet.</p>
-            </div>
-        </section>
+          </div>
 
-        <!-- Action Button -->
-        <section class="mb-6 text-center">
-            <button id="combineFilesButton"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg
-                           transition-all duration-150 ease-in-out shadow-md hover:shadow-lg
-                           focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50
-                           disabled:opacity-50 disabled:cursor-not-allowed">
-                3. Combine & Display Content
+          <!-- Statistics -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="stats-card">
+              <div class="text-2xl font-bold" id="totalFiles">0</div>
+              <div class="text-sm opacity-80">Total Files</div>
+            </div>
+            <div class="stats-card">
+              <div class="text-2xl font-bold" id="visibleFiles">0</div>
+              <div class="text-sm opacity-80">Visible</div>
+            </div>
+            <div class="stats-card">
+              <div class="text-2xl font-bold" id="hiddenFiles">0</div>
+              <div class="text-sm opacity-80">Hidden</div>
+            </div>
+            <div class="stats-card">
+              <div class="text-2xl font-bold" id="skippedFiles">0</div>
+              <div class="text-sm opacity-80">Skipped</div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="glass-card rounded-2xl p-6 space-y-3">
+            <button
+              id="combineFilesButton"
+              class="modern-button w-full py-3 px-6 rounded-xl text-white font-bold"
+              style="background: var(--success-gradient)"
+              disabled
+            >
+              <svg
+                class="w-5 h-5 inline mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                ></path>
+              </svg>
+              Combine Files
             </button>
-        </section>
 
-        <!-- Combined Output Section -->
-        <section>
-            <h2 class="text-lg font-medium text-gray-700 mb-2">4. Combined Output:</h2>
-            <div class="relative">
-                <textarea id="combinedOutput" rows="15" readonly
-                          class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 
-                                 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 
-                                 transition-colors duration-150 resize-none"></textarea>
-                <button id="copyButton" title="Copy Content"
-                        class="absolute top-3 right-3 bg-gray-200 hover:bg-gray-300 text-gray-700
-                               font-bold py-1.5 px-3 rounded-md text-sm transition-colors duration-150
-                               focus:outline-none focus:ring-2 focus:ring-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Copy
+            <button
+              id="clearAllButton"
+              class="modern-button w-full py-2 px-4 rounded-lg text-white font-medium"
+              style="background: var(--danger-gradient)"
+              disabled
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+
+        <!-- Middle Panel - File Tree -->
+        <div class="lg:col-span-1">
+          <div class="glass-card rounded-2xl p-6 h-[600px] overflow-hidden">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-bold text-white">File Tree</h2>
+              <div class="flex items-center space-x-4">
+                <label class="flex items-center space-x-2">
+                  <span class="text-sm text-white/80">Show All</span>
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="showAllToggle" />
+                    <span class="slider"></span>
+                  </div>
+                </label>
+                <button
+                  id="expandAllButton"
+                  class="text-white/80 hover:text-white text-sm font-medium"
+                >
+                  Expand All
                 </button>
+              </div>
             </div>
-        </section>
+
+            <div
+              id="fileTreeContainer"
+              class="file-tree h-full overflow-y-auto scrollbar-hide"
+            >
+              <div class="text-center text-white/60 py-8">
+                <svg
+                  class="w-16 h-16 mx-auto mb-4 opacity-50"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"
+                  ></path>
+                </svg>
+                <p>No files uploaded yet</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel - Output -->
+        <div class="lg:col-span-1">
+          <div class="glass-card rounded-2xl p-6 h-[600px] flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-bold text-white">Combined Output</h2>
+              <button
+                id="copyButton"
+                class="modern-button py-2 px-4 rounded-lg text-white font-medium"
+                style="background: var(--dark-gradient)"
+              >
+                <svg
+                  class="w-4 h-4 inline mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  ></path>
+                </svg>
+                Copy
+              </button>
+            </div>
+
+            <textarea
+              id="combinedOutput"
+              class="code-output flex-1 p-4 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+              readonly
+              placeholder="Combined file contents will appear here..."
+            ></textarea>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Folder Path Modal -->
+    <!-- Modals -->
     <div id="folderPathModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Confirm Folder Base Path</h3>
-            </div>
-            <div class="modal-body">
-                <p class="text-sm text-gray-600 mb-2">Enter a base path prefix for the files from this folder. This will be prepended to each file's relative path. Leave empty to use default relative paths.</p>
-                <input type="text" id="modalBasePathInput" placeholder="e.g., project_root/src/"
-                       class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-sky-500 focus:border-sky-500 text-sm">
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="modalCancelButton" class="modal-button modal-button-secondary">Cancel</button>
-                <button type="button" id="modalConfirmButton" class="modal-button modal-button-primary">Confirm</button>
-            </div>
+      <div class="modal-content">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">
+          Configure Folder Path
+        </h3>
+        <p class="text-gray-600 mb-4">
+          Enter a base path prefix for the files from this folder:
+        </p>
+        <input
+          type="text"
+          id="modalBasePathInput"
+          placeholder="e.g., project_root/src/"
+          class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"
+        />
+        <div class="flex justify-end space-x-3">
+          <button
+            id="modalCancelButton"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            id="modalConfirmButton"
+            class="modern-button px-6 py-2 rounded-lg text-white font-medium"
+            style="background: var(--primary-gradient)"
+          >
+            Confirm
+          </button>
         </div>
+      </div>
     </div>
 
-    <!-- Clear All Confirmation Modal -->
     <div id="clearAllConfirmModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Confirm Clear All</h3>
-            </div>
-            <div class="modal-body">
-                <p class="text-sm text-gray-700">Are you sure you want to remove all files from the list? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="clearAllModalCancelButton" class="modal-button modal-button-secondary">Cancel</button>
-                <button type="button" id="clearAllModalConfirmButton" class="modal-button modal-button-danger">Yes, Clear All</button>
-            </div>
+      <div class="modal-content">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Confirm Clear All</h3>
+        <p class="text-gray-600 mb-4">
+          Are you sure you want to remove all files? This action cannot be
+          undone.
+        </p>
+        <div class="flex justify-end space-x-3">
+          <button
+            id="clearAllModalCancelButton"
+            class="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            id="clearAllModalConfirmButton"
+            class="modern-button px-6 py-2 rounded-lg text-white font-medium"
+            style="background: var(--danger-gradient)"
+          >
+            Yes, Clear All
+          </button>
         </div>
+      </div>
     </div>
-
 
     <div id="toastNotification" class="toast"></div>
 
     <script>
-        // Stores file objects: { id: string, name: string (full path), content: string }
-        let filesData = [];
-        let draggedItem = null;
-        let tempFolderFiles = []; // To temporarily store files from a selected folder before modal confirmation
+      // File data structure
+      let filesData = [];
+      let fileTree = {};
+      let tempFolderFiles = [];
 
-        // DOM Elements
-        const folderUploadInput = document.getElementById('folderUpload');
-        const filesUploadInput = document.getElementById('filesUpload');
-        const manualPathInput = document.getElementById('manualPathInput');
-        const manualFileUploadInput = document.getElementById('manualFileUpload');
+      // Skippable file extensions
+      const SKIPPABLE_EXTENSIONS = new Set([
+        // Images
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".bmp",
+        ".webp",
+        ".svg",
+        ".ico",
+        ".tiff",
+        ".tga",
+        // Videos
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".mkv",
+        ".m4v",
+        ".3gp",
+        ".ogv",
+        // Audio
+        ".mp3",
+        ".wav",
+        ".flac",
+        ".aac",
+        ".ogg",
+        ".wma",
+        ".m4a",
+        ".opus",
+        // Archives
+        ".zip",
+        ".rar",
+        ".7z",
+        ".tar",
+        ".gz",
+        ".bz2",
+        ".xz",
+        ".iso",
+        ".dmg",
+        // Executables
+        ".exe",
+        ".msi",
+        ".app",
+        ".deb",
+        ".rpm",
+        ".pkg",
+        ".bin",
+        // Documents
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".ppt",
+        ".pptx",
+        // Other binary formats
+        ".dll",
+        ".so",
+        ".dylib",
+        ".class",
+        ".jar",
+        ".war",
+      ]);
 
-        const selectFolderButton = document.getElementById('selectFolderButton');
-        const selectFilesButton = document.getElementById('selectFilesButton');
-        const addManualPathButton = document.getElementById('addManualPathButton');
-        
-        const fileListContainer = document.getElementById('fileListContainer');
-        const noFilesMessage = document.getElementById('noFilesMessage');
-        const fileCountSpan = document.getElementById('fileCount');
-        const clearAllButton = document.getElementById('clearAllButton');
+      // DOM Elements
+      const selectFolderButton = document.getElementById("selectFolderButton");
+      const selectFilesButton = document.getElementById("selectFilesButton");
+      const addManualPathButton = document.getElementById(
+        "addManualPathButton"
+      );
+      const folderUploadInput = document.getElementById("folderUpload");
+      const filesUploadInput = document.getElementById("filesUpload");
+      const manualPathInput = document.getElementById("manualPathInput");
+      const manualFileUploadInput = document.getElementById("manualFileUpload");
+      const fileTreeContainer = document.getElementById("fileTreeContainer");
+      const combineFilesButton = document.getElementById("combineFilesButton");
+      const combinedOutput = document.getElementById("combinedOutput");
+      const copyButton = document.getElementById("copyButton");
+      const clearAllButton = document.getElementById("clearAllButton");
+      const showAllToggle = document.getElementById("showAllToggle");
+      const expandAllButton = document.getElementById("expandAllButton");
 
-        const combineFilesButton = document.getElementById('combineFilesButton');
-        const combinedOutputTextarea = document.getElementById('combinedOutput');
-        const copyButton = document.getElementById('copyButton');
-        const toastNotification = document.getElementById('toastNotification');
+      // Modal elements
+      const folderPathModal = document.getElementById("folderPathModal");
+      const modalBasePathInput = document.getElementById("modalBasePathInput");
+      const modalConfirmButton = document.getElementById("modalConfirmButton");
+      const modalCancelButton = document.getElementById("modalCancelButton");
+      const clearAllConfirmModal = document.getElementById(
+        "clearAllConfirmModal"
+      );
+      const clearAllModalConfirmButton = document.getElementById(
+        "clearAllModalConfirmButton"
+      );
+      const clearAllModalCancelButton = document.getElementById(
+        "clearAllModalCancelButton"
+      );
 
-        // Modal DOM Elements
-        const folderPathModal = document.getElementById('folderPathModal');
-        const modalBasePathInput = document.getElementById('modalBasePathInput');
-        const modalConfirmButton = document.getElementById('modalConfirmButton');
-        const modalCancelButton = document.getElementById('modalCancelButton');
+      // Statistics elements
+      const totalFilesSpan = document.getElementById("totalFiles");
+      const visibleFilesSpan = document.getElementById("visibleFiles");
+      const hiddenFilesSpan = document.getElementById("hiddenFiles");
+      const skippedFilesSpan = document.getElementById("skippedFiles");
 
-        const clearAllConfirmModal = document.getElementById('clearAllConfirmModal');
-        const clearAllModalConfirmButton = document.getElementById('clearAllModalConfirmButton');
-        const clearAllModalCancelButton = document.getElementById('clearAllModalCancelButton');
+      // Event Listeners
+      selectFolderButton.addEventListener("click", () =>
+        folderUploadInput.click()
+      );
+      selectFilesButton.addEventListener("click", () =>
+        filesUploadInput.click()
+      );
+      addManualPathButton.addEventListener("click", handleManualPathClick);
+      folderUploadInput.addEventListener("change", handleFolderSelection);
+      filesUploadInput.addEventListener("change", (e) =>
+        handleFileBatchSelection(e, "files")
+      );
+      manualFileUploadInput.addEventListener("change", (e) =>
+        handleFileBatchSelection(e, "manual")
+      );
+      combineFilesButton.addEventListener("click", combineFiles);
+      copyButton.addEventListener("click", copyToClipboard);
+      clearAllButton.addEventListener("click", openClearAllModal);
+      showAllToggle.addEventListener("change", renderFileTree);
+      expandAllButton.addEventListener("click", toggleExpandAll);
 
+      // Modal event listeners
+      modalConfirmButton.addEventListener("click", processFolderFiles);
+      modalCancelButton.addEventListener("click", closeFolderModal);
+      clearAllModalConfirmButton.addEventListener("click", clearAllFiles);
+      clearAllModalCancelButton.addEventListener("click", closeClearAllModal);
 
-        // Initial state for buttons
-        combineFilesButton.disabled = true;
-        clearAllButton.disabled = true;
+      // Utility Functions
+      function generateUniqueId() {
+        return `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      }
 
+      function getFileExtension(filename) {
+        return "." + filename.toLowerCase().split(".").pop();
+      }
 
-        // --- Event Listeners ---
-        selectFolderButton.addEventListener('click', () => folderUploadInput.click());
-        selectFilesButton.addEventListener('click', () => filesUploadInput.click());
-        addManualPathButton.addEventListener('click', () => {
-            if (!manualPathInput.value.trim()) {
-                showToast("Please enter the desired path first.", true);
-                manualPathInput.focus();
-                return;
+      function isSkippableFile(filename) {
+        const ext = getFileExtension(filename);
+        return SKIPPABLE_EXTENSIONS.has(ext);
+      }
+
+      function shouldSkipFile(filename) {
+        return isSkippableFile(filename);
+      }
+
+      function showToast(message, type = "success") {
+        const toast = document.getElementById("toastNotification");
+        toast.textContent = message;
+        toast.className = `toast ${type}`;
+        toast.classList.add("show");
+
+        setTimeout(() => {
+          toast.classList.remove("show");
+        }, 4000);
+      }
+
+      function showLoadingSpinner(button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = '<div class="loading-spinner"></div>Processing...';
+        button.disabled = true;
+        return originalText;
+      }
+
+      function hideLoadingSpinner(button, originalText) {
+        button.innerHTML = originalText;
+        button.disabled = false;
+      }
+
+      // File Handling Functions
+      function handleManualPathClick() {
+        const path = manualPathInput.value.trim();
+        if (!path) {
+          showToast("Please enter a file path first", "error");
+          manualPathInput.focus();
+          return;
+        }
+        manualFileUploadInput.click();
+      }
+
+      async function handleFolderSelection(event) {
+        const files = Array.from(event.target.files);
+        if (!files.length) return;
+
+        const originalText = showLoadingSpinner(selectFolderButton);
+
+        try {
+          tempFolderFiles = [];
+
+          for (const file of files) {
+            const content = await readFileContent(file);
+            tempFolderFiles.push({
+              name: file.name,
+              webkitRelativePath: file.webkitRelativePath || file.name,
+              content: content,
+              skippable: shouldSkipFile(file.name),
+            });
+          }
+
+          openFolderModal();
+        } catch (error) {
+          console.error("Error processing folder:", error);
+          showToast("Error processing folder files", "error");
+        } finally {
+          hideLoadingSpinner(selectFolderButton, originalText);
+          event.target.value = "";
+        }
+      }
+
+      async function handleFileBatchSelection(event, type) {
+        const files = Array.from(event.target.files);
+        if (!files.length) return;
+
+        const button =
+          type === "manual" ? addManualPathButton : selectFilesButton;
+        const originalText = showLoadingSpinner(button);
+
+        try {
+          let addedCount = 0;
+          let skippedCount = 0;
+          let duplicateCount = 0;
+
+          for (const file of files) {
+            let filePath;
+            if (type === "manual") {
+              filePath = manualPathInput.value.trim();
+            } else {
+              filePath = file.name;
             }
-            manualFileUploadInput.click();
+
+            // Check for duplicates
+            if (filesData.some((f) => f.name === filePath)) {
+              duplicateCount++;
+              continue;
+            }
+
+            const content = await readFileContent(file);
+            const isSkippable = shouldSkipFile(file.name);
+
+            filesData.push({
+              id: generateUniqueId(),
+              name: filePath,
+              content: content,
+              hidden: false,
+              skippable: isSkippable,
+            });
+
+            if (isSkippable) {
+              skippedCount++;
+            } else {
+              addedCount++;
+            }
+          }
+
+          if (addedCount > 0 || skippedCount > 0) {
+            buildFileTree();
+            renderFileTree();
+            updateStatistics();
+            showToast(`${addedCount} files added, ${skippedCount} skipped`);
+          }
+
+          if (duplicateCount > 0) {
+            showToast(`${duplicateCount} duplicate files ignored`, "error");
+          }
+
+          if (type === "manual") {
+            manualPathInput.value = "";
+          }
+        } catch (error) {
+          console.error("Error processing files:", error);
+          showToast("Error processing files", "error");
+        } finally {
+          hideLoadingSpinner(button, originalText);
+          event.target.value = "";
+        }
+      }
+
+      function readFileContent(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = () =>
+            reject(new Error(`Failed to read ${file.name}`));
+          reader.readAsText(file);
+        });
+      }
+
+      // Tree Building Functions
+      function buildFileTree() {
+        fileTree = {};
+
+        filesData.forEach((file) => {
+          const pathParts = file.name.split("/");
+          let currentNode = fileTree;
+
+          for (let i = 0; i < pathParts.length; i++) {
+            const part = pathParts[i];
+            const isFile = i === pathParts.length - 1;
+
+            if (!currentNode[part]) {
+              currentNode[part] = {
+                type: isFile ? "file" : "folder",
+                children: isFile ? null : {},
+                fileData: isFile ? file : null,
+                expanded: false,
+              };
+            }
+
+            if (!isFile) {
+              currentNode = currentNode[part].children;
+            }
+          }
+        });
+      }
+
+      function renderFileTree() {
+        if (Object.keys(fileTree).length === 0) {
+          fileTreeContainer.innerHTML = `
+                    <div class="text-center text-white/60 py-8">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        <p>No files uploaded yet</p>
+                    </div>
+                `;
+          return;
+        }
+
+        const showAll = showAllToggle.checked;
+        fileTreeContainer.innerHTML = "";
+        renderTreeNode(fileTree, fileTreeContainer, 0, showAll);
+      }
+
+      function renderTreeNode(node, container, depth, showAll) {
+        Object.keys(node)
+          .sort((a, b) => {
+            const aIsFolder = node[a].type === "folder";
+            const bIsFolder = node[b].type === "folder";
+            if (aIsFolder && !bIsFolder) return -1;
+            if (!aIsFolder && bIsFolder) return 1;
+            return a.localeCompare(b);
+          })
+          .forEach((key) => {
+            const item = node[key];
+
+            if (
+              !showAll &&
+              item.fileData &&
+              (item.fileData.hidden || item.fileData.skippable)
+            ) {
+              return;
+            }
+
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "tree-item py-1 px-2 flex items-center";
+
+            let classes = [];
+            if (item.fileData) {
+              if (item.fileData.hidden) classes.push("hidden-file");
+              if (item.fileData.skippable) classes.push("skipped-file");
+            }
+
+            itemDiv.className += " " + classes.join(" ");
+
+            const indent = "  ".repeat(depth);
+            let icon = "";
+            let toggleIcon = "";
+
+            if (item.type === "folder") {
+              toggleIcon = item.expanded ? "▼" : "▶";
+              icon = "📁";
+              itemDiv.innerHTML = `
+                        <span class="tree-indent" style="width: ${
+                          depth * 16
+                        }px;"></span>
+                        <span class="toggle-icon cursor-pointer mr-1 text-yellow-400">${toggleIcon}</span>
+                        <span class="folder-icon mr-1">${icon}</span>
+                        <span class="tree-folder">${key}</span>
+                    `;
+
+              itemDiv.addEventListener("click", () => {
+                item.expanded = !item.expanded;
+                renderFileTree();
+              });
+            } else {
+              const fileExt = getFileExtension(key);
+              icon = getFileIcon(fileExt);
+
+              const actionButtons = `
+                        <div class="ml-auto flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="toggle-visibility p-1 text-xs hover:bg-white/20 rounded" title="${
+                              item.fileData.hidden ? "Show" : "Hide"
+                            } file">
+                                ${item.fileData.hidden ? "👁️" : "👁️‍🗨️"}
+                            </button>
+                            <button class="remove-file p-1 text-xs hover:bg-red-500/20 rounded text-red-300" title="Remove file">
+                                ✕
+                            </button>
+                        </div>
+                    `;
+
+              itemDiv.className += " group";
+              itemDiv.innerHTML = `
+                        <span class="tree-indent" style="width: ${
+                          depth * 16
+                        }px;"></span>
+                        <span class="file-icon mr-2">${icon}</span>
+                        <span class="tree-file flex-1">${key}</span>
+                        ${actionButtons}
+                    `;
+
+              // Add event listeners for file actions
+              const toggleBtn = itemDiv.querySelector(".toggle-visibility");
+              const removeBtn = itemDiv.querySelector(".remove-file");
+
+              toggleBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                toggleFileVisibility(item.fileData.id);
+              });
+
+              removeBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                removeFile(item.fileData.id);
+              });
+            }
+
+            container.appendChild(itemDiv);
+
+            if (item.type === "folder" && item.expanded && item.children) {
+              renderTreeNode(item.children, container, depth + 1, showAll);
+            }
+          });
+      }
+
+      function getFileIcon(extension) {
+        const iconMap = {
+          ".js": "📄",
+          ".jsx": "⚛️",
+          ".ts": "📘",
+          ".tsx": "⚛️",
+          ".html": "🌐",
+          ".css": "🎨",
+          ".scss": "🎨",
+          ".sass": "🎨",
+          ".json": "📋",
+          ".xml": "📋",
+          ".yaml": "📋",
+          ".yml": "📋",
+          ".md": "📝",
+          ".txt": "📄",
+          ".log": "📊",
+          ".py": "🐍",
+          ".java": "☕",
+          ".cpp": "⚙️",
+          ".c": "⚙️",
+          ".php": "🐘",
+          ".rb": "💎",
+          ".go": "🐹",
+          ".rs": "🦀",
+          ".sql": "🗃️",
+          ".sh": "🖥️",
+          ".bat": "🖥️",
+          ".ps1": "💙",
+        };
+        return iconMap[extension] || "📄";
+      }
+
+      // File Management Functions
+      function toggleFileVisibility(fileId) {
+        const file = filesData.find((f) => f.id === fileId);
+        if (file) {
+          file.hidden = !file.hidden;
+          renderFileTree();
+          updateStatistics();
+          showToast(`File ${file.hidden ? "hidden" : "shown"}`);
+        }
+      }
+
+      function removeFile(fileId) {
+        const fileIndex = filesData.findIndex((f) => f.id === fileId);
+        if (fileIndex !== -1) {
+          const fileName = filesData[fileIndex].name;
+          filesData.splice(fileIndex, 1);
+          buildFileTree();
+          renderFileTree();
+          updateStatistics();
+          showToast(`File "${fileName}" removed`);
+        }
+      }
+
+      function toggleExpandAll() {
+        const allExpanded = isAllExpanded(fileTree);
+        expandAllNodes(fileTree, !allExpanded);
+        renderFileTree();
+        expandAllButton.textContent = allExpanded
+          ? "Expand All"
+          : "Collapse All";
+      }
+
+      function isAllExpanded(node) {
+        for (const key in node) {
+          if (node[key].type === "folder") {
+            if (!node[key].expanded) return false;
+            if (node[key].children && !isAllExpanded(node[key].children))
+              return false;
+          }
+        }
+        return true;
+      }
+
+      function expandAllNodes(node, expand) {
+        for (const key in node) {
+          if (node[key].type === "folder") {
+            node[key].expanded = expand;
+            if (node[key].children) {
+              expandAllNodes(node[key].children, expand);
+            }
+          }
+        }
+      }
+
+      function updateStatistics() {
+        const stats = {
+          total: filesData.length,
+          visible: filesData.filter((f) => !f.hidden && !f.skippable).length,
+          hidden: filesData.filter((f) => f.hidden).length,
+          skipped: filesData.filter((f) => f.skippable).length,
+        };
+
+        totalFilesSpan.textContent = stats.total;
+        visibleFilesSpan.textContent = stats.visible;
+        hiddenFilesSpan.textContent = stats.hidden;
+        skippedFilesSpan.textContent = stats.skipped;
+
+        combineFilesButton.disabled = stats.visible === 0;
+        clearAllButton.disabled = stats.total === 0;
+      }
+
+      // Modal Functions
+      function openFolderModal() {
+        modalBasePathInput.value = "";
+        folderPathModal.style.display = "flex";
+        modalBasePathInput.focus();
+      }
+
+      function closeFolderModal() {
+        folderPathModal.style.display = "none";
+      }
+
+      function processFolderFiles() {
+        const basePath = modalBasePathInput.value.trim();
+        let addedCount = 0;
+        let skippedCount = 0;
+        let duplicateCount = 0;
+
+        tempFolderFiles.forEach((fileInfo) => {
+          const finalPath = basePath
+            ? `${basePath.replace(/\/$/, "")}/${fileInfo.webkitRelativePath}`
+            : fileInfo.webkitRelativePath;
+
+          if (filesData.some((f) => f.name === finalPath)) {
+            duplicateCount++;
+            return;
+          }
+
+          filesData.push({
+            id: generateUniqueId(),
+            name: finalPath,
+            content: fileInfo.content,
+            hidden: false,
+            skippable: fileInfo.skippable,
+          });
+
+          if (fileInfo.skippable) {
+            skippedCount++;
+          } else {
+            addedCount++;
+          }
         });
 
-        folderUploadInput.addEventListener('change', (event) => handleFolderSelection(event));
-        filesUploadInput.addEventListener('change', (event) => handleFileBatchSelection(event, 'files'));
-        manualFileUploadInput.addEventListener('change', (event) => handleFileBatchSelection(event, 'manual'));
+        buildFileTree();
+        renderFileTree();
+        updateStatistics();
 
-        combineFilesButton.addEventListener('click', combineAndDisplayFiles);
-        copyButton.addEventListener('click', copyOutputToClipboard);
-        clearAllButton.addEventListener('click', openClearAllConfirmModal); // Changed to open modal
-
-        modalConfirmButton.addEventListener('click', processFolderFilesWithBasePath);
-        modalCancelButton.addEventListener('click', closeFolderPathModal);
-
-        clearAllModalConfirmButton.addEventListener('click', executeClearAllFiles);
-        clearAllModalCancelButton.addEventListener('click', closeClearAllConfirmModal);
-
-
-        // --- File Handling Logic ---
-
-        /**
-         * Handles the initial selection of a folder.
-         * Reads files and then shows the modal to confirm/edit the base path.
-         */
-        async function handleFolderSelection(event) {
-            const selectedEntries = event.target.files;
-            if (!selectedEntries.length) {
-                event.target.value = null;
-                return;
-            }
-
-            tempFolderFiles = []; 
-            showLoadingIndicator("Processing folder contents...");
-
-            const fileReadPromises = Array.from(selectedEntries).map(file => {
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve({
-                        originalName: file.name, 
-                        webkitRelativePath: file.webkitRelativePath || file.name,
-                        content: e.target.result
-                    });
-                    reader.onerror = () => {
-                        console.error(`Error reading file: ${file.name}`);
-                        resolve({ error: true, name: file.webkitRelativePath || file.name });
-                    };
-                    reader.readAsText(file);
-                });
-            });
-
-            try {
-                const results = await Promise.all(fileReadPromises);
-                tempFolderFiles = results.filter(r => !r.error);
-                const errorCount = results.filter(r => r.error).length;
-
-                if (errorCount > 0) {
-                    showToast(`${errorCount} file(s) could not be read from the folder.`, true);
-                }
-
-                if (tempFolderFiles.length > 0) {
-                    openFolderPathModal();
-                } else {
-                    showToast("No readable files found in the selected folder.", true);
-                }
-            } catch (error) {
-                console.error("Error processing folder selection:", error);
-                showToast("Error processing folder. Check console.", true);
-            } finally {
-                hideLoadingIndicator();
-                event.target.value = null; 
-            }
+        if (addedCount > 0 || skippedCount > 0) {
+          showToast(
+            `${addedCount} files added, ${skippedCount} skipped from folder`
+          );
+        }
+        if (duplicateCount > 0) {
+          showToast(`${duplicateCount} duplicate files ignored`, "error");
         }
 
-        /**
-         * Processes the files from tempFolderFiles using the base path from the modal.
-         */
-        function processFolderFilesWithBasePath() {
-            const basePathPrefix = modalBasePathInput.value.trim();
-            let addedCount = 0;
-            let duplicateCount = 0;
+        closeFolderModal();
+        tempFolderFiles = [];
+      }
 
-            tempFolderFiles.forEach(fileInfo => {
-                const finalPath = (basePathPrefix ? basePathPrefix.replace(/\/$/, '') + '/' : '') + fileInfo.webkitRelativePath;
-                
-                if (filesData.some(f => f.name === finalPath)) {
-                    duplicateCount++;
-                } else {
-                    filesData.push({
-                        id: generateUniqueId(),
-                        name: finalPath,
-                        content: fileInfo.content
-                    });
-                    addedCount++;
-                }
-            });
+      function openClearAllModal() {
+        if (filesData.length > 0) {
+          clearAllConfirmModal.style.display = "flex";
+        } else {
+          showToast("No files to clear", "error");
+        }
+      }
 
-            if (addedCount > 0) {
-                filesData.sort((a, b) => a.name.localeCompare(b.name));
-                renderFileList();
-                showToast(`${addedCount} file(s) added from folder.`);
-            }
-            if (duplicateCount > 0) {
-                showToast(`${duplicateCount} duplicate file(s) from folder were ignored.`, true);
-            }
-            
-            closeFolderPathModal();
-            tempFolderFiles = []; 
+      function closeClearAllModal() {
+        clearAllConfirmModal.style.display = "none";
+      }
+
+      function clearAllFiles() {
+        filesData = [];
+        fileTree = {};
+        renderFileTree();
+        updateStatistics();
+        combinedOutput.value = "";
+        showToast("All files cleared");
+        closeClearAllModal();
+      }
+
+      // File Combination Functions
+      function combineFiles() {
+        const visibleFiles = filesData.filter((f) => !f.hidden && !f.skippable);
+
+        if (visibleFiles.length === 0) {
+          showToast("No visible files to combine", "error");
+          return;
         }
 
-
-        /**
-         * Handles selection of individual files or a file for a manual path.
-         */
-        async function handleFileBatchSelection(event, type) {
-            const selectedEntries = event.target.files;
-            if (!selectedEntries.length) {
-                event.target.value = null;
-                return;
-            }
-
-            showLoadingIndicator("Processing selected files...");
-            
-            const fileReadPromises = Array.from(selectedEntries).map(file => {
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        let filePath;
-                        if (type === 'manual') {
-                            filePath = manualPathInput.value.trim();
-                        } else { 
-                            filePath = file.name;
-                        }
-                        
-                        if (filesData.some(f => f.name === filePath)) {
-                             resolve({ duplicate: true, name: filePath });
-                        } else {
-                            resolve({
-                                id: generateUniqueId(),
-                                name: filePath,
-                                content: e.target.result
-                            });
-                        }
-                    };
-                    reader.onerror = () => {
-                        console.error(`Error reading file: ${file.name}`);
-                        resolve({ error: true, name: (type === 'manual' ? manualPathInput.value.trim() : file.name) });
-                    };
-                    reader.readAsText(file);
-                });
-            });
-
-            try {
-                const results = await Promise.all(fileReadPromises);
-                let addedCount = 0;
-                let duplicateCount = 0;
-                let errorCount = 0;
-
-                results.forEach(r => {
-                    if (r.error) {
-                        errorCount++;
-                        showToast(`Error reading file: ${r.name}`, true);
-                    } else if (r.duplicate) {
-                        duplicateCount++;
-                    } else if (r.id) { 
-                        filesData.push(r);
-                        addedCount++;
-                    }
-                });
-                
-                if (addedCount > 0) {
-                    filesData.sort((a, b) => a.name.localeCompare(b.name));
-                    renderFileList();
-                    showToast(`${addedCount} file(s) added.`);
-                }
-                if (duplicateCount > 0) {
-                    showToast(`${duplicateCount} duplicate file(s) were ignored.`, true);
-                }
-
-            } catch (error) {
-                console.error("Error processing file batch:", error);
-                showToast("Error processing files. Check console.", true);
-            } finally {
-                hideLoadingIndicator();
-                event.target.value = null; 
-                if (type === 'manual') manualPathInput.value = '';
-            }
-        }
-
-        // --- UI Rendering and Updates ---
-
-        /**
-         * Renders the list of files in the UI.
-         */
-        function renderFileList() {
-            fileListContainer.innerHTML = ''; 
-
-            if (filesData.length === 0) {
-                fileListContainer.appendChild(noFilesMessage);
-                noFilesMessage.style.display = 'block';
-            } else {
-                noFilesMessage.style.display = 'none';
-                filesData.forEach(file => {
-                    const fileItem = document.createElement('div');
-                    fileItem.id = file.id;
-                    const displayName = file.name.length > 70 ? `...${file.name.slice(-67)}` : file.name;
-                    fileItem.className = 'file-item bg-white p-3 my-2 rounded-md shadow border border-gray-200 flex justify-between items-center text-sm';
-                    fileItem.draggable = true;
-                    fileItem.title = file.name; 
-
-                    const fileNameSpan = document.createElement('span');
-                    fileNameSpan.textContent = displayName;
-                    fileNameSpan.className = 'text-gray-700 truncate flex-grow mr-2';
-                    fileItem.appendChild(fileNameSpan);
-
-                    const controlsDiv = document.createElement('div');
-                    controlsDiv.className = 'flex items-center space-x-2 flex-shrink-0';
-
-                    const editButton = document.createElement('button');
-                    editButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>`;
-                    editButton.className = 'icon-button text-sky-500 hover:text-sky-700';
-                    editButton.title = 'Edit Path';
-                    editButton.onclick = (e) => {
-                        e.stopPropagation();
-                        editFilePath(file.id);
-                    };
-                    
-                    const removeButton = document.createElement('button');
-                    removeButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>`;
-                    removeButton.className = 'icon-button text-red-500 hover:text-red-700';
-                    removeButton.title = 'Remove File';
-                    removeButton.onclick = (e) => {
-                        e.stopPropagation();
-                        removeFileById(file.id);
-                    };
-                    
-                    const dragHandle = document.createElement('span');
-                    dragHandle.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zM7 7h2v2H7V7zm4 0h2v2h-2V7zm-4 4h2v2H7v-2zm4 0h2v2h-2v-2z" /></svg>`; 
-                    dragHandle.className = 'text-gray-400 cursor-grab';
-                    
-                    controlsDiv.appendChild(editButton);
-                    controlsDiv.appendChild(removeButton);
-                    controlsDiv.appendChild(dragHandle);
-                    fileItem.appendChild(controlsDiv);
-
-                    addDragAndDropEvents(fileItem);
-                    fileListContainer.appendChild(fileItem);
-                });
-            }
-            updateFileCountAndButtonStates();
-        }
-        
-        /**
-         * Allows editing the path of a specific file.
-         */
-        function editFilePath(fileId) {
-            const fileToEdit = filesData.find(f => f.id === fileId);
-            if (!fileToEdit) return;
-
-            const newPath = prompt("Enter the new path for this file:", fileToEdit.name);
-            if (newPath !== null && newPath.trim() !== "") {
-                const oldPath = fileToEdit.name;
-                if (filesData.some(f => f.id !== fileId && f.name === newPath.trim())) {
-                    showToast(`Path "${newPath.trim()}" already exists. Choose a unique path.`, true);
-                    return;
-                }
-                fileToEdit.name = newPath.trim();
-                filesData.sort((a, b) => a.name.localeCompare(b.name)); 
-                renderFileList();
-                showToast(`Path updated for "${oldPath}" to "${newPath.trim()}".`);
-            } else if (newPath === "") { 
-                 showToast("Path cannot be empty.", true);
-            }
-        }
-
-        /**
-         * Removes a file from the filesData array and re-renders the list.
-         */
-        function removeFileById(fileId) {
-            const fileToRemove = filesData.find(f => f.id === fileId);
-            if (fileToRemove) {
-                filesData = filesData.filter(f => f.id !== fileId);
-                renderFileList();
-                showToast(`File "${fileToRemove.name}" removed.`);
-            }
-        }
-
-        /**
-         * Opens the confirmation modal for clearing all files.
-         */
-        function openClearAllConfirmModal() {
-            if (filesData.length > 0) {
-                clearAllConfirmModal.style.display = 'flex';
-            } else {
-                showToast("File list is already empty.", true);
-            }
-        }
-        
-        /**
-         * Closes the confirmation modal for clearing all files.
-         */
-        function closeClearAllConfirmModal() {
-            clearAllConfirmModal.style.display = 'none';
-        }
-
-        /**
-         * Executes the clearing of all files after confirmation.
-         */
-        function executeClearAllFiles() {
-            filesData = [];
-            renderFileList();
-            combinedOutputTextarea.value = ''; 
-            showToast("All files cleared.");
-            closeClearAllConfirmModal();
-        }
-        
-        /**
-         * Updates the file count display and enables/disables relevant buttons.
-         */
-        function updateFileCountAndButtonStates() {
-            const count = filesData.length;
-            fileCountSpan.textContent = count;
-            combineFilesButton.disabled = count === 0;
-            clearAllButton.disabled = count === 0;
-        }
-
-        // --- Drag and Drop Logic ---
-        function addDragAndDropEvents(item) {
-            item.addEventListener('dragstart', (e) => {
-                draggedItem = item;
-                setTimeout(() => item.classList.add('dragging'), 0);
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', item.id); 
-            });
-
-            item.addEventListener('dragend', () => {
-                if (draggedItem) { 
-                    draggedItem.classList.remove('dragging');
-                }
-                draggedItem = null;
-                updateFilesDataOrderAfterDrag();
-            });
-        }
-
-        fileListContainer.addEventListener('dragover', (e) => {
-            e.preventDefault(); 
-            const afterElement = getDragAfterElement(fileListContainer, e.clientY);
-            if (draggedItem) { 
-                if (afterElement == null) {
-                    fileListContainer.appendChild(draggedItem);
-                } else {
-                    fileListContainer.insertBefore(draggedItem, afterElement);
-                }
-            }
+        let combinedContent = "";
+        visibleFiles.forEach((file, index) => {
+          combinedContent += `${"=".repeat(60)}\n`;
+          combinedContent += `// FILE: ${file.name}\n`;
+          combinedContent += `${"=".repeat(60)}\n\n`;
+          combinedContent += file.content;
+          if (index < visibleFiles.length - 1) {
+            combinedContent += "\n\n";
+          }
         });
 
-        function getDragAfterElement(container, y) {
-            const draggableElements = [...container.querySelectorAll('.file-item:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
-        
-        function updateFilesDataOrderAfterDrag() {
-            const orderedFileIds = Array.from(fileListContainer.querySelectorAll('.file-item')).map(item => item.id);
-            const newFilesData = [];
-            orderedFileIds.forEach(id => {
-                const file = filesData.find(f => f.id === id);
-                if (file) {
-                    newFilesData.push(file);
-                }
-            });
-            filesData = newFilesData;
+        combinedOutput.value = combinedContent;
+        showToast(`${visibleFiles.length} files combined successfully`);
+      }
+
+      function copyToClipboard() {
+        if (!combinedOutput.value.trim()) {
+          showToast("Nothing to copy", "error");
+          return;
         }
 
-        // --- Core Functionality ---
-        /**
-         * Combines file contents and displays them.
-         */
-        function combineAndDisplayFiles() {
-            if (filesData.length === 0) {
-                combinedOutputTextarea.value = 'No files added to combine.';
-                showToast("No files to combine.", true);
-                return;
-            }
-            let combinedContent = '';
-            filesData.forEach(file => {
-                combinedContent += `${file.name} :\n`; 
-                combinedContent += `${file.content}\n\n`;
-            });
-            combinedOutputTextarea.value = combinedContent.trim();
-            showToast("Files combined successfully!");
+        combinedOutput.select();
+        combinedOutput.setSelectionRange(0, 99999);
+
+        try {
+          document.execCommand("copy");
+          showToast("Content copied to clipboard!");
+        } catch (err) {
+          showToast("Failed to copy to clipboard", "error");
+          console.error("Copy failed:", err);
         }
 
-        /**
-         * Copies the combined output to the clipboard.
-         */
-        function copyOutputToClipboard() {
-            if (!combinedOutputTextarea.value) {
-                 showToast("Nothing to copy.", true);
-                return;
-            }
-            combinedOutputTextarea.select();
-            combinedOutputTextarea.setSelectionRange(0, 99999); 
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    showToast("Content copied to clipboard!");
-                } else {
-                    showToast("Failed to copy. Please try again.", true);
-                }
-            } catch (err) {
-                console.error('Error copying to clipboard:', err);
-                showToast("Error copying. Check console.", true);
-            }
-            window.getSelection()?.removeAllRanges(); 
-        }
+        window.getSelection()?.removeAllRanges();
+      }
 
-        // --- Modal Logic ---
-        function openFolderPathModal() {
-            modalBasePathInput.value = ''; 
-            folderPathModal.style.display = 'flex'; 
-            modalBasePathInput.focus();
+      // Modal close on outside click
+      window.addEventListener("click", (event) => {
+        if (event.target === folderPathModal) {
+          closeFolderModal();
         }
-
-        function closeFolderPathModal() {
-            folderPathModal.style.display = 'none';
+        if (event.target === clearAllConfirmModal) {
+          closeClearAllModal();
         }
-        
-        window.onclick = function(event) {
-            if (event.target == folderPathModal) {
-                closeFolderPathModal();
-            }
-            if (event.target == clearAllConfirmModal) { // Close clear all modal on outside click
-                closeClearAllConfirmModal();
-            }
-        }
+      });
 
-        // --- Utility Functions ---
-        function generateUniqueId() {
-            return `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        }
-
-        function showToast(message, isError = false) {
-            toastNotification.textContent = message;
-            toastNotification.className = 'toast'; 
-            if (isError) {
-                toastNotification.style.backgroundColor = '#ef4444'; 
-            } else {
-                toastNotification.style.backgroundColor = '#10b981'; 
-            }
-            void toastNotification.offsetWidth; 
-            toastNotification.classList.add('show');
-
-            setTimeout(() => {
-                toastNotification.classList.remove('show');
-            }, 3000);
-        }
-
-        function showLoadingIndicator(message = "Processing...") {
-            let indicator = fileListContainer.querySelector('.loading-indicator');
-            if (!indicator) {
-                indicator = document.createElement('p');
-                indicator.className = 'loading-indicator text-gray-500 text-center animate-pulse p-4';
-                fileListContainer.prepend(indicator); 
-            }
-            indicator.textContent = message;
-            noFilesMessage.style.display = 'none'; 
-        }
-
-        function hideLoadingIndicator() {
-            const indicator = fileListContainer.querySelector('.loading-indicator');
-            if (indicator) {
-                indicator.remove();
-            }
-            if(filesData.length === 0 && fileListContainer.childElementCount === 0) {
-                 fileListContainer.appendChild(noFilesMessage);
-                 noFilesMessage.style.display = 'block';
-            }
-        }
-        renderFileList();
-
+      // Initialize
+      updateStatistics();
+      renderFileTree();
     </script>
-
-</body>
+  </body>
 </html>
